@@ -98,11 +98,17 @@ def generate_report(df):
         df[carichi_col] * 100
     ).round(1)
 
-    # Top performance
-    top = df.sort_values(
-        "Sell Through %",
-        ascending=False
-    ).head(10)
+    # Top seller reali
+top = df.sort_values(
+    valore_col,
+    ascending=False
+).head(10)
+
+# Slow movers
+slow = df.sort_values(
+    "Sell Through %",
+    ascending=True
+).head(10)
 
     # Grafico
     plt.figure(figsize=(8, 4))
@@ -135,8 +141,18 @@ def generate_report(df):
 
     media_sell = df["Sell Through %"].mean()
 
+    sellout_totale = df[valore_col].sum()
+
     doc.add_paragraph(
-        f"Sell-through medio: {media_sell:.1f}%"
+        f"""
+        Sell-through medio: {media_sell:.1f}%
+
+        Sell-out totale: € {sellout_totale:,.0f}
+
+        Il report evidenzia le migliori performance sell-out,
+        gli articoli a rotazione lenta e le opportunità
+        di ottimizzazione stock/marginalità.
+        """
     )
 
     table = doc.add_table(
@@ -168,6 +184,48 @@ def generate_report(df):
                 row[valore_col]
             )
 
+    # Sezione Slow Movers
+doc.add_heading(
+    "Articoli Slow Moving",
+    level=2
+)
+
+slow_table = doc.add_table(
+    rows=1,
+    cols=3
+)
+
+hdr2 = slow_table.rows[0].cells
+
+hdr2[0].text = "Articolo"
+hdr2[1].text = "Sell Through"
+hdr2[2].text = "Azione Consigliata"
+
+for _, row in slow.iterrows():
+
+    cells = slow_table.add_row().cells
+
+    cells[0].text = str(
+        row[brand_col]
+    )
+
+    st_value = row["Sell Through %"]
+
+    cells[1].text = (
+        f"{st_value:.1f}%"
+    )
+
+    # Smart markdown
+    if st_value < 20:
+        action = "Markdown 15%"
+    elif st_value < 40:
+        action = "Promo CRM"
+    elif st_value < 60:
+        action = "Monitorare"
+    else:
+        action = "Best Seller"
+
+    cells[2].text = action
     doc.add_picture(
         chart_path,
         width=Inches(5)
