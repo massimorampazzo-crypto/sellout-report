@@ -65,12 +65,12 @@ df['Sell Through %'] = (
     df[carichi_col] * 100
 ).round(1)
 
-    top = df.sort_values(
-        'Sell Through %',
-        ascending=False
-    ).head(10)
+top = df.sort_values(
+    'Sell Through %',
+    ascending=False
+).head(10)
 
-    plt.figure(figsize=(8,4))
+plt.figure(figsize=(8,4))
 
     plt.bar(
         top.iloc[:,0]
@@ -88,7 +88,7 @@ df['Sell Through %'] = (
     plt.savefig(chart_path)
     plt.close()
 
-    doc = Document()
+doc = Document()
 
     doc.add_heading(
         'Report Sell-In / Sell-Out',
