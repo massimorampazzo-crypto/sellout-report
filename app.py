@@ -23,7 +23,6 @@ email_dest = st.text_input(
 GMAIL_USER = "selloutreportsvgs@gmail.com"
 GMAIL_PASSWORD = "wndlkafpxndjvbwu"
 
-
 def generate_report(df):
 
     # Pulizia colonne
@@ -31,54 +30,20 @@ def generate_report(df):
     df.columns = df.columns.str.strip()
 
     # Debug colonne
-    st.write("Colonne trovate nel file:")
+    st.write("Colonne trovate:")
     st.write(list(df.columns))
 
-    vendite_col = None
-    carichi_col = None
-    valore_col = None
-
-    brand_col = df.columns[1]
-
-    # Ricerca automatica colonne
-    for col in df.columns:
-
-        nome = col.lower()
-
-        if (
-            "vend" in nome and
-            ("q" in nome or "qt" in nome)
-        ):
-            vendite_col = col
-
-        if (
-            "caric" in nome and
-            ("q" in nome or "qt" in nome)
-        ):
-            carichi_col = col
-
-        if (
-            "val" in nome and
-            "vend" in nome
-        ):
-            valore_col = col
-
-    st.write("Colonna Brand:", brand_col)
-    st.write("Colonna Vendite:", vendite_col)
-    st.write("Colonna Carichi:", carichi_col)
-    st.write("Colonna Valore:", valore_col)
-
-    # Controllo sicurezza
-    if vendite_col is None:
-        st.error("❌ Colonna vendite non trovata")
-        st.stop()
-
-    if carichi_col is None:
-        st.error("❌ Colonna carichi non trovata")
-        st.stop()
+    vendite_col = "Q.ta Vendite Totali"
+    carichi_col = "Q.ta Carico"
+    valore_col = "Val. Vendite Totali"
+    brand_col = "Descrizione Articolo"
 
     # Conversione numerica
-    for col in [vendite_col, carichi_col]:
+    for col in [
+        vendite_col,
+        carichi_col,
+        valore_col
+    ]:
 
         df[col] = (
             df[col]
@@ -98,17 +63,17 @@ def generate_report(df):
         df[carichi_col] * 100
     ).round(1)
 
-    # Top seller reali
-top = df.sort_values(
-    valore_col,
-    ascending=False
-).head(10)
+    # Top seller
+    top = df.sort_values(
+        valore_col,
+        ascending=False
+    ).head(10)
 
-# Slow movers
-slow = df.sort_values(
-    "Sell Through %",
-    ascending=True
-).head(10)
+    # Slow movers
+    slow = df.sort_values(
+        "Sell Through %",
+        ascending=True
+    ).head(10)
 
     # Grafico
     plt.figure(figsize=(8, 4))
@@ -131,7 +96,7 @@ slow = df.sort_values(
 
     plt.close()
 
-    # Documento Word
+    # Documento
     doc = Document()
 
     doc.add_heading(
@@ -145,14 +110,22 @@ slow = df.sort_values(
 
     doc.add_paragraph(
         f"""
-        Sell-through medio: {media_sell:.1f}%
+Sell-through medio: {media_sell:.1f}%
 
-        Sell-out totale: € {sellout_totale:,.0f}
+Sell-out totale: € {sellout_totale:,.0f}
 
-        Il report evidenzia le migliori performance sell-out,
-        gli articoli a rotazione lenta e le opportunità
-        di ottimizzazione stock/marginalità.
-        """
+Il report evidenzia:
+- top seller
+- slow movers
+- articoli critici
+- opportunità markdown
+"""
+    )
+
+    # Tabella top seller
+    doc.add_heading(
+        "Top Seller",
+        level=2
     )
 
     table = doc.add_table(
@@ -162,7 +135,7 @@ slow = df.sort_values(
 
     hdr = table.rows[0].cells
 
-    hdr[0].text = "Brand"
+    hdr[0].text = "Articolo"
     hdr[1].text = "Sell Through"
     hdr[2].text = "Vendite"
 
@@ -175,62 +148,62 @@ slow = df.sort_values(
         )
 
         cells[1].text = (
-            f"{row['Sell Through %']}%"
+            f"{row['Sell Through %']:.1f}%"
         )
 
-        if valore_col:
+        cells[2].text = (
+            f"€ {row[valore_col]:,.0f}"
+        )
 
-            cells[2].text = str(
-                row[valore_col]
-            )
-
-    # Sezione Slow Movers
-doc.add_heading(
-    "Articoli Slow Moving",
-    level=2
-)
-
-slow_table = doc.add_table(
-    rows=1,
-    cols=3
-)
-
-hdr2 = slow_table.rows[0].cells
-
-hdr2[0].text = "Articolo"
-hdr2[1].text = "Sell Through"
-hdr2[2].text = "Azione Consigliata"
-
-for _, row in slow.iterrows():
-
-    cells = slow_table.add_row().cells
-
-    cells[0].text = str(
-        row[brand_col]
+    # Slow movers
+    doc.add_heading(
+        "Slow Movers",
+        level=2
     )
 
-    st_value = row["Sell Through %"]
-
-    cells[1].text = (
-        f"{st_value:.1f}%"
+    slow_table = doc.add_table(
+        rows=1,
+        cols=3
     )
 
-    # Smart markdown
-    if st_value < 20:
-        action = "Markdown 15%"
-    elif st_value < 40:
-        action = "Promo CRM"
-    elif st_value < 60:
-        action = "Monitorare"
-    else:
-        action = "Best Seller"
+    hdr2 = slow_table.rows[0].cells
 
-    cells[2].text = action
+    hdr2[0].text = "Articolo"
+    hdr2[1].text = "Sell Through"
+    hdr2[2].text = "Azione"
+
+    for _, row in slow.iterrows():
+
+        cells = slow_table.add_row().cells
+
+        cells[0].text = str(
+            row[brand_col]
+        )
+
+        st_value = row["Sell Through %"]
+
+        cells[1].text = (
+            f"{st_value:.1f}%"
+        )
+
+        if st_value < 20:
+            action = "Markdown 15%"
+        elif st_value < 40:
+            action = "Promo CRM"
+        elif st_value < 60:
+            action = "Monitorare"
+        else:
+            action = "Best Seller"
+
+        cells[2].text = action
+
+    # Grafico
     doc.add_picture(
         chart_path,
         width=Inches(5)
     )
 
+    # Salvataggio
     report_path = tempfile.NamedTemporaryFile(
         delete=False,
         suffix=".docx"
@@ -239,7 +212,6 @@ for _, row in slow.iterrows():
     doc.save(report_path)
 
     return report_path
-
 
 if st.button("Genera Report"):
 
