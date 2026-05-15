@@ -203,6 +203,54 @@ Il report evidenzia:
         width=Inches(5)
     )
 
+    # Relazione finale
+doc.add_heading(
+    "Conclusioni e Azioni Consigliate",
+    level=2
+)
+
+# KPI principali
+sellthrough_medio = df["Sell Through %"].mean()
+
+top_sellthrough = df["Sell Through %"].max()
+
+slow_count = len(
+    df[df["Sell Through %"] < 30]
+)
+
+best_count = len(
+    df[df["Sell Through %"] > 70]
+)
+
+# Testo automatico
+relazione = f"""
+L'analisi sell-in / sell-out evidenzia un sell-through medio pari al {sellthrough_medio:.1f}%.
+
+Gli articoli best performer mostrano una forte rotazione e una domanda stabile, con picchi di sell-through fino al {top_sellthrough:.1f}%.
+Attualmente risultano {best_count} articoli con performance elevate superiori al 70% di sell-through.
+
+Parallelamente sono presenti {slow_count} articoli con sell-through inferiore al 30%, indicativi di stock a rotazione lenta e potenziale immobilizzo di capitale.
+
+Azioni consigliate:
+
+• Rafforzare il replenishment dei best seller evitando markdown prematuri.
+
+• Applicare scontistiche progressive sugli slow movers mantenendo la marginalità:
+  - 10-15% per articoli sotto il 30% di sell-through
+  - bundle e promo CRM per articoli stagionali
+  - evitare sconti aggressivi sui prodotti premium
+
+• Incrementare visual merchandising e push commerciale sui prodotti con sell-through intermedio (40-60%).
+
+• Monitorare lo stock aging per prevenire accumuli di magazzino a fine stagione.
+
+• Utilizzare campagne mirate su clienti fidelizzati per smaltire stock lento senza compromettere il posizionamento del brand.
+
+Nel complesso il portafoglio mostra una buona concentrazione delle vendite sui top seller, mentre alcune referenze richiedono interventi di ottimizzazione sell-out e gestione markdown.
+"""
+
+doc.add_paragraph(relazione)
+
     # Salvataggio
     report_path = tempfile.NamedTemporaryFile(
         delete=False,
