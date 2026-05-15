@@ -7,16 +7,18 @@ import smtplib
 from email.message import EmailMessage
 import tempfile
 
-st.set_page_config(page_title="Sellout Report Generator")
+st.set_page_config(page_title="Sellout Report")
 
 st.title("📊 Sell-In / Sell-Out Report Generator")
 
 uploaded_file = st.file_uploader(
-    "Carica file Excel o CSV",
+    "Carica file CSV o Excel",
     type=["csv", "xlsx"]
 )
 
-email_dest = st.text_input("Inserisci email destinatario")
+email_dest = st.text_input(
+    "Inserisci email destinatario"
+)
 
 GMAIL_USER = "selloutreportsvgs@gmail.com"
 GMAIL_PASSWORD = "Max2026$$$"
@@ -24,14 +26,31 @@ GMAIL_PASSWORD = "Max2026$$$"
 
 def generate_report(df):
 
-    numeric_cols = [
-        'Q.ta Carichi',
-        'Val Vendite',
-        'Q.ta Vendite'
-    ]
+    # Pulizia colonne
+    df.columns = df.columns.str.strip()
 
-    for col in numeric_cols:
-        if col in df.columns:
+    # Ricerca automatica colonne
+    vendite_col = None
+    carichi_col = None
+    valore_col = None
+    brand_col = df.columns[0]
+
+    for col in df.columns:
+
+        if 'Vendite' in col and 'Q.ta' in col:
+            vendite_col = col
+
+        if 'Carichi' in col and 'Q.ta' in col:
+            carichi_col = col
+
+        if 'Val Vendite' in col:
+            valore_col = col
+
+    # Conversione numerica
+    for col in [vendite_col, carichi_col, valore_col]:
+
+        if col:
+
             df[col] = (
                 df[col]
                 .astype(str)
@@ -44,60 +63,51 @@ def generate_report(df):
                 errors='coerce'
             )
 
-    # Pulizia nomi colonne
-df.columns = df.columns.str.strip()
+    # Sell Through
+    df['Sell Through %'] = (
+        df[vendite_col] /
+        df[carichi_col] * 100
+    ).round(1)
 
-# Trova automaticamente colonne corrette
-vendite_col = None
-carichi_col = None
+    # Top performance
+    top = df.sort_values(
+        'Sell Through %',
+        ascending=False
+    ).head(10)
 
-for col in df.columns:
-
-    if 'Vendite' in col and 'Q.ta' in col:
-        vendite_col = col
-
-    if 'Carichi' in col and 'Q.ta' in col:
-        carichi_col = col
-
-# Calcolo sell through
-df['Sell Through %'] = (
-    df[vendite_col] /
-    df[carichi_col] * 100
-).round(1)
-
-top = df.sort_values(
-    'Sell Through %',
-    ascending=False
-).head(10)
-
-plt.figure(figsize=(8,4))
+    # Grafico
+    plt.figure(figsize=(8, 4))
 
     plt.bar(
-        top.iloc[:,0]
+        top[brand_col],
         top['Sell Through %']
     )
 
     plt.xticks(rotation=45)
+
+    plt.tight_layout()
 
     chart_path = tempfile.NamedTemporaryFile(
         delete=False,
         suffix=".png"
     ).name
 
-    plt.tight_layout()
     plt.savefig(chart_path)
+
     plt.close()
 
-doc = Document()
+    # Documento Word
+    doc = Document()
 
     doc.add_heading(
         'Report Sell-In / Sell-Out',
         level=1
     )
 
+    media_sell = df['Sell Through %'].mean()
+
     doc.add_paragraph(
-        f"Sell-through medio: "
-        f"{df['Sell Through %'].mean():.1f}%"
+        f"Sell-through medio: {media_sell:.1f}%"
     )
 
     table = doc.add_table(
@@ -115,19 +125,21 @@ doc = Document()
 
         cells = table.add_row().cells
 
-        cells[0].text = str(
-            row[df.columns[4]]
-        )
+        cells[0].text = str(row[brand_col])
 
         cells[1].text = (
             f"{row['Sell Through %']}%"
         )
 
-        cells[2].text = (
-            f"€ {row['Val Vendite']:,.0f}"
-        )
+        if valore_col:
+            cells[2].text = (
+                f"€ {row[valore_col]:,.0f}"
+            )
 
-    doc.add_picture(chart_path, width=Inches(5))
+    doc.add_picture(
+        chart_path,
+        width=Inches(5)
+    )
 
     report_path = tempfile.NamedTemporaryFile(
         delete=False,
@@ -143,6 +155,7 @@ if st.button("Genera Report"):
 
     if uploaded_file and email_dest:
 
+        # Lettura file
         if uploaded_file.name.endswith(".csv"):
 
             df = pd.read_csv(
@@ -156,20 +169,20 @@ if st.button("Genera Report"):
                 uploaded_file
             )
 
+        # Generazione report
         report = generate_report(df)
 
+        # Invio mail
         msg = EmailMessage()
 
-        msg['Subject'] = (
-            'Report Sell-Out'
-        )
+        msg['Subject'] = 'Report Sell-Out'
 
         msg['From'] = GMAIL_USER
 
         msg['To'] = email_dest
 
         msg.set_content(
-            'In allegato il report.'
+            'In allegato il report automatico.'
         )
 
         with open(report, 'rb') as f:
@@ -194,5 +207,5 @@ if st.button("Genera Report"):
             smtp.send_message(msg)
 
         st.success(
-            "✅ Report inviato!"
+            "✅ Report inviato correttamente!"
         )
