@@ -38,7 +38,7 @@ def generate_report(df):
     carichi_col = None
     valore_col = None
 
-    brand_col = "Marchio"
+    brand_col = df.columns[1]
 
     # Ricerca automatica colonne
     for col in df.columns:
