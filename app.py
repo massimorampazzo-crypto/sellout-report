@@ -44,10 +44,26 @@ def generate_report(df):
                 errors='coerce'
             )
 
-    df['Sell Through %'] = (
-        df['Q.ta Vendite'] /
-        df['Q.ta Carichi'] * 100
-    ).round(1)
+    # Pulizia nomi colonne
+df.columns = df.columns.str.strip()
+
+# Trova automaticamente colonne corrette
+vendite_col = None
+carichi_col = None
+
+for col in df.columns:
+
+    if 'Vendite' in col and 'Q.ta' in col:
+        vendite_col = col
+
+    if 'Carichi' in col and 'Q.ta' in col:
+        carichi_col = col
+
+# Calcolo sell through
+df['Sell Through %'] = (
+    df[vendite_col] /
+    df[carichi_col] * 100
+).round(1)
 
     top = df.sort_values(
         'Sell Through %',
@@ -57,7 +73,7 @@ def generate_report(df):
     plt.figure(figsize=(8,4))
 
     plt.bar(
-        top['Elemento raggruppante:  Marchio'],
+        top.iloc[:,0]
         top['Sell Through %']
     )
 
@@ -100,7 +116,7 @@ def generate_report(df):
         cells = table.add_row().cells
 
         cells[0].text = str(
-            row['Elemento raggruppante:  Marchio']
+            row.iloc[:,0]
         )
 
         cells[1].text = (
