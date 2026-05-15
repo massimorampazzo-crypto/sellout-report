@@ -21,7 +21,7 @@ email_dest = st.text_input(
 )
 
 GMAIL_USER = "selloutreportsvgs@gmail.com"
-GMAIL_PASSWORD = "wndl kafp xndj vbwu"
+GMAIL_PASSWORD = "wndlkafpxndjvbwu"
 
 
 def generate_report(df):
