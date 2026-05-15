@@ -116,7 +116,7 @@ df['Sell Through %'] = (
         cells = table.add_row().cells
 
         cells[0].text = str(
-            row.iloc[:,0]
+            row[df.columns[4]]
         )
 
         cells[1].text = (
