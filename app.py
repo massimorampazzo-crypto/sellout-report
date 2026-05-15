@@ -29,22 +29,53 @@ def generate_report(df):
     # Pulizia colonne
     df.columns = df.columns.str.strip()
 
-    # Ricerca automatica colonne
-    vendite_col = None
-    carichi_col = None
-    valore_col = None
-    brand_col = df.columns[0]
+# Ricerca automatica colonne
+vendite_col = None
+carichi_col = None
+valore_col = None
 
-    for col in df.columns:
+# Prima colonna = brand
+brand_col = df.columns[0]
 
-        if 'Vendite' in col and 'Q.ta' in col:
-            vendite_col = col
+for col in df.columns:
 
-        if 'Carichi' in col and 'Q.ta' in col:
-            carichi_col = col
+    nome = str(col).lower()
 
-        if 'Val Vendite' in col:
-            valore_col = col
+    # Quantità vendute
+    if (
+        'vendite' in nome or
+        'venduti' in nome
+    ) and (
+        'q' in nome or
+        'qt' in nome
+    ):
+        vendite_col = col
+
+    # Quantità caricate
+    if (
+        'carichi' in nome or
+        'acquisti' in nome
+    ) and (
+        'q' in nome or
+        'qt' in nome
+    ):
+        carichi_col = col
+
+    # Valore vendite
+    if (
+        'val' in nome and
+        'vend' in nome
+    ):
+        valore_col = col
+st.write("Colonne trovate:")
+
+st.write("Brand:", brand_col)
+
+st.write("Vendite:", vendite_col)
+
+st.write("Carichi:", carichi_col)
+
+st.write("Valore:", valore_col)
 
     # Conversione numerica
     for col in [vendite_col, carichi_col, valore_col]:
