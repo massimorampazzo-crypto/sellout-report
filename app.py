@@ -27,82 +27,80 @@ GMAIL_PASSWORD = "Max2026$$$"
 def generate_report(df):
 
     # Pulizia colonne
+    df.columns = df.columns.astype(str)
     df.columns = df.columns.str.strip()
 
-# Ricerca automatica colonne
-vendite_col = None
-carichi_col = None
-valore_col = None
+    # Debug colonne
+    st.write("Colonne trovate nel file:")
+    st.write(list(df.columns))
 
-# Prima colonna = brand
-brand_col = df.columns[0]
+    vendite_col = None
+    carichi_col = None
+    valore_col = None
 
-for col in df.columns:
+    brand_col = df.columns[0]
 
-    nome = str(col).lower()
+    # Ricerca automatica colonne
+    for col in df.columns:
 
-    # Quantità vendute
-    if (
-        'vendite' in nome or
-        'venduti' in nome
-    ) and (
-        'q' in nome or
-        'qt' in nome
-    ):
-        vendite_col = col
+        nome = col.lower()
 
-    # Quantità caricate
-    if (
-        'carichi' in nome or
-        'acquisti' in nome
-    ) and (
-        'q' in nome or
-        'qt' in nome
-    ):
-        carichi_col = col
+        if (
+            "vend" in nome and
+            ("q" in nome or "qt" in nome)
+        ):
+            vendite_col = col
 
-    # Valore vendite
-    if (
-        'val' in nome and
-        'vend' in nome
-    ):
-        valore_col = col
-st.write("Colonne trovate:")
+        if (
+            "caric" in nome and
+            ("q" in nome or "qt" in nome)
+        ):
+            carichi_col = col
 
-st.write("Brand:", brand_col)
+        if (
+            "val" in nome and
+            "vend" in nome
+        ):
+            valore_col = col
 
-st.write("Vendite:", vendite_col)
+    st.write("Colonna Brand:", brand_col)
+    st.write("Colonna Vendite:", vendite_col)
+    st.write("Colonna Carichi:", carichi_col)
+    st.write("Colonna Valore:", valore_col)
 
-st.write("Carichi:", carichi_col)
+    # Controllo sicurezza
+    if vendite_col is None:
+        st.error("❌ Colonna vendite non trovata")
+        st.stop()
 
-st.write("Valore:", valore_col)
+    if carichi_col is None:
+        st.error("❌ Colonna carichi non trovata")
+        st.stop()
 
     # Conversione numerica
-    for col in [vendite_col, carichi_col, valore_col]:
+    for col in [vendite_col, carichi_col]:
 
-        if col:
+        df[col] = (
+            df[col]
+            .astype(str)
+            .str.replace(".", "", regex=False)
+            .str.replace(",", ".", regex=False)
+        )
 
-            df[col] = (
-                df[col]
-                .astype(str)
-                .str.replace('.', '', regex=False)
-                .str.replace(',', '.', regex=False)
-            )
-
-            df[col] = pd.to_numeric(
-                df[col],
-                errors='coerce'
-            )
+        df[col] = pd.to_numeric(
+            df[col],
+            errors="coerce"
+        )
 
     # Sell Through
-    df['Sell Through %'] = (
+    df["Sell Through %"] = (
         df[vendite_col] /
         df[carichi_col] * 100
     ).round(1)
 
     # Top performance
     top = df.sort_values(
-        'Sell Through %',
+        "Sell Through %",
         ascending=False
     ).head(10)
 
@@ -111,7 +109,7 @@ st.write("Valore:", valore_col)
 
     plt.bar(
         top[brand_col],
-        top['Sell Through %']
+        top["Sell Through %"]
     )
 
     plt.xticks(rotation=45)
@@ -131,11 +129,11 @@ st.write("Valore:", valore_col)
     doc = Document()
 
     doc.add_heading(
-        'Report Sell-In / Sell-Out',
+        "Report Sell-In / Sell-Out",
         level=1
     )
 
-    media_sell = df['Sell Through %'].mean()
+    media_sell = df["Sell Through %"].mean()
 
     doc.add_paragraph(
         f"Sell-through medio: {media_sell:.1f}%"
@@ -156,15 +154,18 @@ st.write("Valore:", valore_col)
 
         cells = table.add_row().cells
 
-        cells[0].text = str(row[brand_col])
+        cells[0].text = str(
+            row[brand_col]
+        )
 
         cells[1].text = (
             f"{row['Sell Through %']}%"
         )
 
         if valore_col:
-            cells[2].text = (
-                f"€ {row[valore_col]:,.0f}"
+
+            cells[2].text = str(
+                row[valore_col]
             )
 
     doc.add_picture(
@@ -200,33 +201,35 @@ if st.button("Genera Report"):
                 uploaded_file
             )
 
-        # Generazione report
+        # Genera report
         report = generate_report(df)
 
         # Invio mail
         msg = EmailMessage()
 
-        msg['Subject'] = 'Report Sell-Out'
-
-        msg['From'] = GMAIL_USER
-
-        msg['To'] = email_dest
-
-        msg.set_content(
-            'In allegato il report automatico.'
+        msg["Subject"] = (
+            "Report Sell-Out"
         )
 
-        with open(report, 'rb') as f:
+        msg["From"] = GMAIL_USER
+
+        msg["To"] = email_dest
+
+        msg.set_content(
+            "In allegato il report automatico."
+        )
+
+        with open(report, "rb") as f:
 
             msg.add_attachment(
                 f.read(),
-                maintype='application',
-                subtype='octet-stream',
-                filename='report.docx'
+                maintype="application",
+                subtype="octet-stream",
+                filename="report.docx"
             )
 
         with smtplib.SMTP_SSL(
-            'smtp.gmail.com',
+            "smtp.gmail.com",
             465
         ) as smtp:
 
